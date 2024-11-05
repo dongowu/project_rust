@@ -15,7 +15,8 @@ struct User {
 
 async fn receive( http_request: HttpRequest) ->impl Responder{
     info!("Received request :{}",http_request.path());
-    HttpResponse::Ok()
+    let resp = custom_response::Response::new(200, "Ok".parse().unwrap(), "Hello world!");
+    HttpResponse::Ok().json(resp)
 }
 
 async fn post_user(user: web::Json<User> ) -> impl Responder {
@@ -45,3 +46,4 @@ async fn main() -> std::io::Result<()> {
         .run()
         .await
 }
+
