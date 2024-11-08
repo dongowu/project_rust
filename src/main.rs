@@ -1,50 +1,57 @@
-use actix_web::{HttpServer, App, web, Responder, middleware, HttpResponse, HttpRequest};
-use env_logger::{Env};
-use serde::{Deserialize, Serialize};
+use std::time::Duration;
+
+use actix_web::{App,  HttpServer, middleware, Responder, web};
+use actix_web::middleware::from_fn;
+use env_logger::Env;
 use log::info;
 
+use custom::{custom_response::custom_response,custom_error::custom_error,custom_middleware::middleware as custom_middleware};
+
+async fn greet(name: web::Path<String>) -> impl Responder {
+    format!("hello {}!", name)
+}
+
+
+async fn custom_response() -> impl Responder {
+    info!("data value");
+    let resp =  custom_response::CustomResponse::new(vec![1,2,3], 200, "success".to_string());
+
+    resp
+}
+
+
+async fn custom_error() ->impl Responder{
+
+    custom_error::Error::new(1200400, "error".to_string())
+}
 
 async fn index() -> impl Responder {
-    "Hello world!"
+    "Hello world!".to_string()
 }
-#[derive(Deserialize, Serialize,Debug)]
-struct User {
-    username:String,
-    email:String,
-}
-
-async fn receive( http_request: HttpRequest) ->impl Responder{
-    info!("Received request :{}",http_request.path());
-    let resp = custom_response::Response::new(200, "Ok".parse().unwrap(), "Hello world!");
-    HttpResponse::Ok().json(resp)
-}
-
-async fn post_user(user: web::Json<User> ) -> impl Responder {
-
-    let resp = custom_response::Response::new(201, "Created".parse().unwrap(), user);
-    // let user = user.into_inner();
-    // info!("this user is {:?}",user);
-    HttpResponse::Created().json(resp)
-}
-
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::try_init_from_env(Env::default().default_filter_or("info")).expect("TODO: panic message");
 
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
-    HttpServer::new(|| {
+    HttpServer::new(move || {
+        let get_route_group = web::scope("/v1");
         App::new()
-            .wrap(middleware::Logger::default().log_target("actix_web"))
+            .wrap(middleware::Logger::default().log_target("http_log"))
+            .wrap(from_fn(custom_middleware::print_request))
+            .wrap(from_fn(custom_middleware::response_time))
+            .wrap(from_fn(custom_middleware::get_header))
             .service(
-            web::scope("/api/v1")
-                .route("/", web::get().to(index))
-                .route("/post",web::post().to(post_user))
-                .route("/info",web::get().to(receive))
-        )
+                get_route_group.route("/hello/{name}", web::get().to(greet))
+                    .route("/index", web::get().to(index))
+                    .route("/response", web::post().to(custom_response))
+                    .route("/error",web::post().to(custom_error))
+            )
     })
+        .workers(1)
+        .keep_alive(Duration::from_secs(4))
         .bind("127.0.0.1:8080")?
-        .workers(4)
         .run()
         .await
 }
+
 
