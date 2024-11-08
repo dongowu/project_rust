@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use actix_web::{HttpRequest, HttpResponse, http::header::ContentType, Responder};
+use actix_web::{HttpRequest, HttpResponse, http::header::ContentType, Responder, Result, http};
 
 #[derive(Serialize, Deserialize)]
 pub struct Response<T> {
@@ -22,12 +22,12 @@ impl<T> Responder for Response<T>
 where
     T: Serialize,  // 确保 T 类型可序列化
 {
-    type Body = String;  // 响应体类型是 String，因为我们将它转化为 JSON 字符串
+    type Body = actix_web::body::BoxBody;  // 响应体类型是 String，因为我们将它转化为 JSON 字符串
 
-    fn respond_to(self, req: &HttpRequest) -> HttpResponse<Self::Body> {
+    fn respond_to(self, req: &HttpRequest) -> Result<HttpResponse<Self::Body>> {
         // 直接使用 .json() 方法来序列化响应体
-        HttpResponse::Ok()
+        Ok(HttpResponse::build(http::StatusCode::OK)
             .content_type(ContentType::json())
-            .json(self)  // `self` 会自动序列化
+            .json(self))  // `self` 会自动序列化
     }
 }

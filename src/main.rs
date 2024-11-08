@@ -21,9 +21,10 @@ async fn receive( http_request: HttpRequest) ->impl Responder{
 
 async fn post_user(user: web::Json<User> ) -> impl Responder {
 
-    let user = user.into_inner();
-    info!("this user is {:?}",user);
-    HttpResponse::Created().json(user)
+    let resp = custom_response::Response::new(201, "Created".parse().unwrap(), user);
+    // let user = user.into_inner();
+    // info!("this user is {:?}",user);
+    HttpResponse::Created().json(resp)
 }
 
 
