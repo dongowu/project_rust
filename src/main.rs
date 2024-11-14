@@ -20,6 +20,15 @@ async fn custom_response() -> impl Responder {
 }
 
 
+struct AppState{
+    app_name:String,
+}
+
+async fn index_state(data:web::Data<AppState>)->String{
+    let app_name = &data.app_name;
+    format!("Hello {}", app_name)
+}
+
 async fn custom_error() ->impl Responder{
 
     custom_error::Error::new(1200400, "error".to_string())
@@ -36,15 +45,18 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let get_route_group = web::scope("/v1");
         App::new()
+            .app_data(web::Data::new(AppState{app_name:"actix-web".to_string()}).clone())
             .wrap(middleware::Logger::default().log_target("http_log"))
             .wrap(from_fn(custom_middleware::print_request))
             .wrap(from_fn(custom_middleware::response_time))
             .wrap(from_fn(custom_middleware::get_header))
+            // .wrap(from_fn(custom_middleware::get_state))
             .service(
                 get_route_group.route("/hello/{name}", web::get().to(greet))
                     .route("/index", web::get().to(index))
                     .route("/response", web::post().to(custom_response))
                     .route("/error",web::post().to(custom_error))
+                    .route("/index1",web::get().to(index_state))
             )
     })
         .workers(1)

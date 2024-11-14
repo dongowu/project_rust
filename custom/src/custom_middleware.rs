@@ -3,10 +3,11 @@ pub  mod middleware{
     use std::collections::HashMap;
     use actix_web::body::MessageBody;
     use actix_web::dev::{ServiceRequest, ServiceResponse};
-    use actix_web::{Error};
+    use actix_web::{Error, web};
     use actix_web::middleware::Next;
     use actix_web::web::Query;
     use log::info;
+    use crate::custom_middleware::AppState;
 
     pub async fn print_request(
         string_body: String,
@@ -44,4 +45,14 @@ pub  mod middleware{
         Ok(next.call(req).await?)
     }
 
+    pub async fn get_state(state :web::Data<AppState>, req :ServiceRequest,next: Next<impl MessageBody +'static>)->Result<ServiceResponse<impl MessageBody>,Error>{
+
+        info!("state,{:?}",state.app_name);
+        Ok(next.call(req).await?)
+    }
+}
+
+
+pub struct AppState{
+    app_name:String,
 }
